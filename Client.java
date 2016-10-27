@@ -33,26 +33,24 @@ public class Client {
             BufferedReader userIn = new BufferedReader(
                 new InputStreamReader(System.in));
         
-            // get message from user
-            message = userIn.readLine();
-        
             //connect via address given, send username with it
             Socket clientSocket = new Socket(address, 2016);
 			
 			//Read before you can write so no messages are lost when coming to you
-			BufferedReader serverIn = new BufferedReader( new InputStreamReader(clientSocket.getInputStream()));
 			DataOutputStream serverOut = new DataOutputStream(clientSocket.getOutputStream());
-			serverOut.writeBytes(username);
-            
+			BufferedReader serverIn = new BufferedReader( new InputStreamReader(clientSocket.getInputStream()));
+			serverOut.writeBytes(username + '\n');
+            reply = serverIn.readLine();
+			System.out.println(reply);
             // create stream for reading data from server
 
             
             // send data to server
-            serverOut.writeBytes(message + '\n');
+            //serverOut.writeBytes(message + '\n');
             // get data from server
             reply = serverIn.readLine();
             // print reply from server
-            System.out.println("REPLY RECEIVED: " + reply);
+            //System.out.println("REPLY RECEIVED: " + reply);
             clientSocket.close();
         }
         catch(ConnectException e) {

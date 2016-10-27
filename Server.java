@@ -13,13 +13,16 @@ import java.time.*;
  */
 public class Server {
 	
+	private static final int MAX_USER = 50;
     //Start a server
     public static void main(String[] args) throws IOException
 	{
         String clientMessage;
 		String serverReply;
-		String[] username; //hard cap, if connectionNumber goes above it, it'll break
-        Socket[] connection;
+		
+		String[] username = new String[MAX_USER]; //hard cap, if connectionNumber goes above it, it'll break
+		
+        Socket[] connection = new Socket[MAX_USER];
 		int connectionNumber = 0;
 		
         try
@@ -37,8 +40,10 @@ public class Server {
 				System.out.println("User Connected: " + username[connectionNumber] + " from " + connection[connectionNumber].getInetAddress());
 				//Ready to send that new user messages
                 DataOutputStream clientOut = new DataOutputStream(connection[connectionNumber].getOutputStream());
-				String welcome = "Welcome to the server, " + username[connectionNumber] +"!\n";
-				connectionNumber++;
+				System.out.println("FLAG");
+				String welcome = "Welcome to the server, " + username[connectionNumber] + "!\n";
+				clientOut.writeBytes(welcome);
+				//connectionNumber++;
 				
                 // get message from client and captilatize the letters
                 //clientMessage = clientIn.readLine();
@@ -47,7 +52,7 @@ public class Server {
 
 		            // send client reply 
                 //clientOut.writeBytes(serverReply);
-                //connectionSocket.close();
+                connection[connectionNumber].close();
             }
         }
         catch (Exception e)
