@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.*;
+import java.lang.*;
 
 /**
  * A client that connects to a server on startup
@@ -11,15 +12,19 @@ import java.net.*;
  * @author Justin Ohta, Max Oakes
  * @version 1.0.0
  */
-public class Client {
+public class Client implements Runnable {
     
-    public static void main(String[] args) throws IOException {
-        // create Strings to store message and reply
-        String message;
-		String reply;
-		String username;
-        String address;
-		
+	private static String message;
+	private static String reply;
+	private static String username;
+    private static String address;
+    private static BufferedReader serverIn;
+	private static DataOutputStream serverOut;
+	private static Socket clientSocket;
+	
+	public static void main(String[] args) throws IOException
+	{
+ 		
 		//get the username
 		System.out.print("\nUsername: ");
 		username = System.console().readLine();
@@ -34,24 +39,30 @@ public class Client {
                 new InputStreamReader(System.in));
         
             //connect via address given, send username with it
-            Socket clientSocket = new Socket(address, 2016);
+            clientSocket = new Socket(address, 2016);
 			
 			//Read before you can write so no messages are lost when coming to you
-			DataOutputStream serverOut = new DataOutputStream(clientSocket.getOutputStream());
-			BufferedReader serverIn = new BufferedReader( new InputStreamReader(clientSocket.getInputStream()));
+			serverOut = new DataOutputStream(clientSocket.getOutputStream());
+			serverIn = new BufferedReader( new InputStreamReader(clientSocket.getInputStream()));
 			serverOut.writeBytes(username + '\n');
-            reply = serverIn.readLine();
-			System.out.println(reply);
-            // create stream for reading data from server
-
             
-            // send data to server
-            //serverOut.writeBytes(message + '\n');
-            // get data from server
-            reply = serverIn.readLine();
-            // print reply from server
-            //System.out.println("REPLY RECEIVED: " + reply);
-            clientSocket.close();
+			//Welcome message from server
+			reply = serverIn.readLine();
+			System.out.println(reply);
+
+			(new Thread(new Client())).start();
+			System.out.println("CLIENT - Thread Spawned, in main thread now");
+
+			address = System.console().readLine();
+			while (true)
+			{
+				reply = serverIn.readLine();
+				if (reply != null)
+				{
+					System.out.println(reply);
+				}
+			}
+					
         }
         catch(ConnectException e) {
             System.out.println("Error connecting to server. Check that server is running and accepting connections.");
@@ -60,4 +71,32 @@ public class Client {
             System.out.println("Exception occurred: " + e.getMessage());
         }
     }
+	
+	public void run()
+	{
+		String msg;
+		while (true)
+		{
+			System.out.print("\n" + username + "(me): ");
+			msg = System.console().readLine();
+			try
+			{
+				sendMessage(msg);
+			}
+			catch (Exception e)
+			{
+				System.out.println("Message failed");
+			}
+		}
+    }
+	
+	public void sendMessage(String inMessage) throws IOException
+	{
+		if (inMessage == "/quit\n")
+		{
+				clientSocket.close();
+				System.out.println("CLIENT - Disconnected from server.");
+		}
+		serverOut.writeBytes("/chat" + username + ": " + inMessage + '\n');
+	}
 }

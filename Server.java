@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.*;
 import java.time.*;
+import java.lang.*;
 
 /**
  * A server that manages a multi-user chat program
@@ -11,9 +12,12 @@ import java.time.*;
  * @author Max Oakes, Justin Ohta
  * @version 1.0.0
  */
-public class Server {
+public class Server implements Runnable{
 	
 	private static final int MAX_USER = 50;
+	private static BufferedReader clientIn;
+	private static DataOutputStream clientOut;
+	
     //Start a server
     public static void main(String[] args) throws IOException
 	{
@@ -31,16 +35,19 @@ public class Server {
             ServerSocket accepting = new ServerSocket(2016); //port 2016, because why not
             
             // wait for clients to make connections
+			(new Thread(new Server())).start();
+			System.out.println("SERVER - Thread Spawned, in main thread now");
+			
             while(true)
 			{
 				//when user connects
                 connection[connectionNumber] = accepting.accept();
-				BufferedReader clientIn = new BufferedReader(new InputStreamReader(connection[connectionNumber].getInputStream()));
+				clientIn = new BufferedReader(new InputStreamReader(connection[connectionNumber].getInputStream()));
 				username[connectionNumber] = clientIn.readLine();
 				System.out.println("User Connected: " + username[connectionNumber] + " from " + connection[connectionNumber].getInetAddress());
+				
 				//Ready to send that new user messages
-                DataOutputStream clientOut = new DataOutputStream(connection[connectionNumber].getOutputStream());
-				System.out.println("FLAG");
+                clientOut = new DataOutputStream(connection[connectionNumber].getOutputStream());
 				String welcome = "Welcome to the server, " + username[connectionNumber] + "!\n";
 				clientOut.writeBytes(welcome);
 				//connectionNumber++;
@@ -52,7 +59,7 @@ public class Server {
 
 		            // send client reply 
                 //clientOut.writeBytes(serverReply);
-                connection[connectionNumber].close();
+                //connection[connectionNumber].close();
             }
         }
         catch (Exception e)
@@ -60,4 +67,56 @@ public class Server {
             System.out.println("An error occurred while creating server socket or reading/writing data to/from client.");
         }
     }
+	
+	public void run()
+	{
+		String msg = "";
+		while (true)
+		{
+			try
+			{
+				msg = clientIn.readLine();
+				//System.out.println(msg+"\n");
+				while(msg == "" || msg == null)
+				{
+					try
+					{
+						Thread.sleep(500);
+					}
+					catch (Exception e)
+					{
+						System.out.println("Sleep Failed.\n");
+					}
+				}
+			}
+			catch (Exception e)
+			{
+				try
+				{
+					Thread.sleep(500);
+				}
+				catch (Exception f)
+				{
+					System.out.println("Sleep2 Failed.\n");
+				}
+			}
+			
+			if (msg.length() > 5)
+			{
+				if (msg.startsWith("/chat"))
+				{
+					System.out.println(msg.substring(5));
+					try
+					{
+						clientOut.writeBytes(msg);
+					}
+					catch (Exception e)
+					{
+						System.out.println("Error when sending\n");
+					}
+				}
+			}
+			msg = "";
+		}
+	}
 }
