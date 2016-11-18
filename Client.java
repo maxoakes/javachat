@@ -46,23 +46,32 @@ public class Client implements Runnable {
 			//Read before you can write so no messages are lost when coming to you
 			serverOut = new DataOutputStream(clientSocket.getOutputStream());
 			serverIn = new BufferedReader( new InputStreamReader(clientSocket.getInputStream()));
+			
+			//send the server your username
 			serverOut.writeBytes(username + '\n');
             
 			//Welcome message from server
 			reply = serverIn.readLine();
 			System.out.println(reply);
 
+			//spawn new thread
+			//this new one will manage you typing and chatting
 			(new Thread(new Client())).start();
+			
+			//start a temp JFrame that is jank and awkward, but it works
 			JFrame frame = new JFrame();
 			JOptionPane.showMessageDialog(frame, "Connected to " + address);
 			
 			while (true)
 			{
+				//init new Jframe for a new chat
 				JFrame chatWindow = new JFrame();
 				String chat;
-				chat = serverIn.readLine();
-				JOptionPane.showMessageDialog(chatWindow, chat);
 				
+				//when we get a new message from the server...
+				chat = serverIn.readLine();
+				//make a dialog window
+				JOptionPane.showMessageDialog(chatWindow, chat);
 			}
 			
         }
@@ -78,13 +87,18 @@ public class Client implements Runnable {
 	
 	public void run()
 	{
+		//ready your next message
 		String msg;
 		while (true)
 		{
+			//an initial prompt for the user
 			System.out.print("\n" + username + "(me): ");
+			
+			//get input chat message
 			msg = System.console().readLine();
 			try
 			{
+				//send the message to the server
 				sendMessage(msg);
 			}
 			catch (Exception e)
@@ -96,12 +110,14 @@ public class Client implements Runnable {
 	
 	public void sendMessage(String inMessage) throws IOException
 	{
+		//if it is a command message, assume it is /quit and exit the server
 		if (inMessage.charAt(0) == '/')
 		{
 				clientSocket.close();
 				System.out.println("CLIENT - Disconnected from server.");
 				System.exit(0);
 		}
+		//if it not a command, send the message to the server
 		serverOut.writeBytes("/chat" + username + ": " + inMessage + '\n');
 	}
 }
