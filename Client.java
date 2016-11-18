@@ -1,6 +1,8 @@
 import java.io.*;
 import java.net.*;
 import java.lang.*;
+import javax.swing.*;
+import java.awt.*;
 
 /**
  * A client that connects to a server on startup
@@ -51,24 +53,26 @@ public class Client implements Runnable {
 			System.out.println(reply);
 
 			(new Thread(new Client())).start();
-			System.out.println("CLIENT - Thread Spawned, in main thread now");
-
-			address = System.console().readLine();
+			JFrame frame = new JFrame();
+			JOptionPane.showMessageDialog(frame, "Connected to " + address);
+			
 			while (true)
 			{
-				reply = serverIn.readLine();
-				if (reply != null)
-				{
-					System.out.println(reply);
-				}
+				JFrame chatWindow = new JFrame();
+				String chat;
+				chat = serverIn.readLine();
+				JOptionPane.showMessageDialog(chatWindow, chat);
+				
 			}
-					
+			
         }
-        catch(ConnectException e) {
+        catch(ConnectException e)
+		{
             System.out.println("Error connecting to server. Check that server is running and accepting connections.");
         }
-        catch(Exception e) {
-            System.out.println("Exception occurred: " + e.getMessage());
+        catch(Exception e)
+		{
+            System.out.println("Chat client closed.");
         }
     }
 	
@@ -92,10 +96,11 @@ public class Client implements Runnable {
 	
 	public void sendMessage(String inMessage) throws IOException
 	{
-		if (inMessage == "/quit\n")
+		if (inMessage.charAt(0) == '/')
 		{
 				clientSocket.close();
 				System.out.println("CLIENT - Disconnected from server.");
+				System.exit(0);
 		}
 		serverOut.writeBytes("/chat" + username + ": " + inMessage + '\n');
 	}

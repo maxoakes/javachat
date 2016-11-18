@@ -36,15 +36,16 @@ public class Server implements Runnable{
             
             // wait for clients to make connections
 			(new Thread(new Server())).start();
-			System.out.println("SERVER - Thread Spawned, in main thread now");
+			System.out.println("SERVER - Thread Spawned, in main thread now\n");
 			
             while(true)
 			{
 				//when user connects
+				System.out.println("Awaiting users to join\n");
                 connection[connectionNumber] = accepting.accept();
 				clientIn = new BufferedReader(new InputStreamReader(connection[connectionNumber].getInputStream()));
 				username[connectionNumber] = clientIn.readLine();
-				System.out.println("User Connected: " + username[connectionNumber] + " from " + connection[connectionNumber].getInetAddress());
+				System.out.println("User Connected: " + username[connectionNumber] + " from " + connection[connectionNumber].getInetAddress() + "\n");
 				
 				//Ready to send that new user messages
                 clientOut = new DataOutputStream(connection[connectionNumber].getOutputStream());
@@ -64,7 +65,7 @@ public class Server implements Runnable{
         }
         catch (Exception e)
 		{
-            System.out.println("An error occurred while creating server socket or reading/writing data to/from client.");
+            System.out.println("An error occurred while creating server socket or reading/writing data to/from client.\n");
         }
     }
 	
@@ -77,7 +78,8 @@ public class Server implements Runnable{
 			{
 				msg = clientIn.readLine();
 				//System.out.println(msg+"\n");
-				while(msg == "" || msg == null)
+				while(msg == "" || msg == null);
+				/*
 				{
 					try
 					{
@@ -88,12 +90,13 @@ public class Server implements Runnable{
 						System.out.println("Sleep Failed.\n");
 					}
 				}
+				*/
 			}
 			catch (Exception e)
 			{
 				try
 				{
-					Thread.sleep(500);
+					Thread.sleep(100);
 				}
 				catch (Exception f)
 				{
@@ -105,10 +108,12 @@ public class Server implements Runnable{
 			{
 				if (msg.startsWith("/chat"))
 				{
-					System.out.println(msg.substring(5));
+					msg = msg.substring(5);
+					System.out.println(msg);
 					try
 					{
-						clientOut.writeBytes(msg);
+						clientOut.writeBytes(msg+'\n');
+						//System.out.println("DEBUG - MSG SENT: "+ msg + "\n");
 					}
 					catch (Exception e)
 					{
