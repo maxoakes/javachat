@@ -19,10 +19,12 @@ public class Client implements Runnable {
 	private static String message;
 	private static String reply;
 	private static String username;
-    private static String address;
+    private static String ip;
+	private static InetAddress address;
     private static BufferedReader serverIn;
 	private static DataOutputStream serverOut;
 	private static Socket clientSocket;
+	private static JLabel chatbox = new JLabel("Server Chat");
 	
 	public static void main(String[] args) throws IOException
 	{
@@ -33,7 +35,8 @@ public class Client implements Runnable {
 		
 		//get address
 		System.out.print("\nServer IP: ");
-		address = System.console().readLine();
+		ip = System.console().readLine();
+		address = InetAddress.getByName(ip);
 		
         try {
             // create reader to acquire text
@@ -58,6 +61,9 @@ public class Client implements Runnable {
 			//this new one will manage you typing and chatting
 			(new Thread(new Client())).start();
 			
+			//chatbox.setText("Welcome to the server");
+			//chatbox.setVerticalTextPosition(chatbox.getVerticalTextPosition()+10);
+			
 			//start a temp JFrame that is jank and awkward, but it works
 			JFrame frame = new JFrame();
 			JOptionPane.showMessageDialog(frame, "Connected to " + address);
@@ -72,6 +78,7 @@ public class Client implements Runnable {
 				chat = serverIn.readLine();
 				//make a dialog window
 				JOptionPane.showMessageDialog(chatWindow, chat);
+				//chatbox.setText(chat);
 			}
 			
         }
