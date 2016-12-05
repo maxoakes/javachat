@@ -24,7 +24,7 @@ public class Client implements Runnable {
     private static BufferedReader serverIn;
 	private static DataOutputStream serverOut;
 	private static Socket clientSocket;
-	private static JLabel chatbox = new JLabel("Server Chat");
+	//private static JLabel chatbox = new JLabel("Server Chat");
 	
 	public static void main(String[] args) throws IOException
 	{
