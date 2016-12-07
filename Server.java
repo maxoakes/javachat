@@ -17,13 +17,14 @@ import java.text.SimpleDateFormat;
  */
 public class Server implements Runnable{
 	
-	private static final int MAX_USER = 50;
+	private static final int MAX_USER = 100;
 	private static BufferedReader[] clientIn = new BufferedReader[MAX_USER];
 	private static DataOutputStream[] clientOut = new DataOutputStream[MAX_USER];
 	private static String[] username = new String[MAX_USER];
 	private static Socket[] connection = new Socket[MAX_USER];
 	private static Thread[] messageHandler = new Thread[MAX_USER];
-	private static int connectionNumber = 0;
+	private static int connectionNumber = 0; //inducates which users are connected, cell number indicates UID, 1=active, 0=nobody there
+	private static int[] usedNumbers = new int[MAX_USER];
 	private static PrintWriter log;
 	
     //Start a server
@@ -32,6 +33,11 @@ public class Server implements Runnable{
         String clientMessage;
 		String serverReply;
 		
+		//init usedNumbers
+		for (int u = 0; u < MAX_USER; u++)
+		{
+			usedNumbers[u] = 0;
+		}
         try
 		{
 			//open file for logging
@@ -39,20 +45,16 @@ public class Server implements Runnable{
 			
             //made a port
             ServerSocket accepting = new ServerSocket(2016); //port 2016, because why not
-            
-            // wait for clients to make connections
-			//this new thread will manage incoming chat
-			//(new Thread(new Server())).start();
 			
-			//current thread will manage incoming users
-			System.out.println("SERVER - Thread Spawned, in main thread now\n");
-			
+			//current thread will manage incoming users			
             while(true)
 			{
 				//when user connects
 				System.out.println("Awaiting users to join\n");
 				//accept their connection
                 connection[connectionNumber] = accepting.accept();
+				
+				//one connected user will have their own thread, each thread will manage their incoming chat messages
 				messageHandler[connectionNumber] = new Thread(new Server());
 				messageHandler[connectionNumber].start();
 				
@@ -69,6 +71,7 @@ public class Server implements Runnable{
 				clientOut[connectionNumber].writeBytes(welcome);
 				
 				//iterate connection for new user
+				usedNumbers[connectionNumber] = 1;
 				connectionNumber++;
             }
         }
@@ -82,28 +85,32 @@ public class Server implements Runnable{
 	//Its job is to manage incoming messages
 	public void run()
 	{
+		//to handle Control-C
 		Runtime.getRuntime().addShutdownHook(new Thread(){
 			@Override
 			public void run()
 			{
 				log.close();
-				System.out.println("Server closed");
-				for (int i = 0; i<connectionNumber; i++)
+				for (int i = 0; i<MAX_USER; i++)
 				{
-					try
+					if (usedNumbers[i] == 1)
 					{
-						clientOut[i].writeBytes("Server closed\n");
-					}
-					catch (Exception e)
-					{
-						System.out.println("Error when sending\n");
+						try
+						{
+							clientOut[i].writeBytes("Server closed\n");
+						}
+						catch (Exception e)
+						{
+							//System.out.println("Error when sending\n");
+						}
 					}
 				}
 			}
 		});
 		
 		int thisThreadNum = connectionNumber;
-		System.out.println("In new thread #"+thisThreadNum);
+		//System.out.println("In new thread #"+thisThreadNum);
+		
 		//init next chat message
 		String msg = "";
 		
@@ -115,23 +122,8 @@ public class Server implements Runnable{
 				//wait for new chat message
 				msg = clientIn[thisThreadNum].readLine();
 				
-				//full message and message type has first chars, /chat for example
-				//System.out.println(msg+"\n");
-				
 				//dont tell me when nobody is sending anything
 				while(msg == "" || msg == null);
-				/*
-				{
-					try
-					{
-						Thread.sleep(500);
-					}
-					catch (Exception e)
-					{
-						System.out.println("Sleep Failed.\n");
-					}
-				}
-				*/
 			}
 			catch (Exception e)
 			{
@@ -141,47 +133,76 @@ public class Server implements Runnable{
 				}
 				catch (Exception f)
 				{
-					System.out.println("Sleep2 Failed.\n");
+					//System.out.println("Sleep2 Failed.\n");
 				}
 			}
 			
 			//if there is a chat message
-			if (msg.length() > 5)
+			if (msg.length() > 4)
 			{
+				//Do string operations: add timestamp
+				long time = System.currentTimeMillis();
+				Date date = new Date(time);
+				DateFormat formatter = new SimpleDateFormat("HH:mm:ss");
+				String strTime = "[" + formatter.format(date) + "]";
+					
 				//... and it is indeed a chat message from a person
 				if (msg.startsWith("/chat"))
 				{
 					//get the string of the chat
 					msg = msg.substring(5);
 					
-					//Do string operations: add timestamp
-					long time = System.currentTimeMillis();
-					Date date = new Date(time);
-					DateFormat formatter = new SimpleDateFormat("HH:mm:ss");
-					//System.out.println(formatter.format(date));
+					String fullMessage = strTime + " " + username[thisThreadNum] + ": " + msg + '\n';
 					
-					String fullMessage = "[" + formatter.format(date) + "] " + msg + '\n';
 					
-					//print it so the server (and later a log)
-					System.out.println(fullMessage);
-					for (int i = 0; i<connectionNumber; i++)
+					//print to log file outside of the for loop so it prints to file only once
+					log.println(fullMessage);
+								
+					//send it to every active user/address/thread, what-have-you
+					System.out.print(fullMessage);
+					for (int i = 0; i<MAX_USER; i++)
 					{
-						try
+						if (usedNumbers[i] == 1)
 						{
-							//send it to all clients (currently just one client)
-							clientOut[thisThreadNum].writeBytes(fullMessage);
-							
-							//print to log file
-							
-							log.println(fullMessage);
-							//System.out.println("DEBUG - MSG SENT: "+ msg + "\n");
-						}
-						catch (Exception e)
-						{
-							System.out.println("Error when sending\n");
+							try
+							{
+								//send it to all clients
+								clientOut[i].writeBytes(fullMessage);
+							}
+							catch (Exception e)
+							{
+								System.out.println("Error when sending chat message\n");
+							}
 						}
 					}
 
+				}
+				if (msg.startsWith("/quit"))
+				{
+					String quitMessage = strTime + " " + username[thisThreadNum] + " has left the server.\n";
+					//print to log file once
+					log.println(quitMessage);
+					for (int i = 0; i<MAX_USER; i++)
+					{
+						if (usedNumbers[i] == 1)
+						{
+							try
+							{	
+								//deactivate User
+								usedNumbers[thisThreadNum] = 0;
+								
+								//send it to all remaining clients
+								clientOut[i].writeBytes(quitMessage);
+								
+								System.out.println("User #" + thisThreadNum + " to 0.");
+								messageHandler[thisThreadNum].interrupt(); //stop the thread
+							}
+							catch (Exception e)
+							{
+								System.out.println("Error when sending quit message\n");
+							}
+						}
+					}
 				}
 			}
 			//reset the next message

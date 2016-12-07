@@ -3,6 +3,7 @@ import java.net.*;
 import java.lang.*;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.*;
 
 /**
  * A client that connects to a server on startup
@@ -24,7 +25,6 @@ public class Client implements Runnable {
     private static BufferedReader serverIn;
 	private static DataOutputStream serverOut;
 	private static Socket clientSocket;
-	//private static JLabel chatbox = new JLabel("Server Chat");
 	
 	public static void main(String[] args) throws IOException
 	{
@@ -61,39 +61,58 @@ public class Client implements Runnable {
 			//this new one will manage you typing and chatting
 			(new Thread(new Client())).start();
 			
-			//chatbox.setText("Welcome to the server");
-			//chatbox.setVerticalTextPosition(chatbox.getVerticalTextPosition()+10);
-			
-			//start a temp JFrame that is jank and awkward, but it works
+			//make an external window			
+			//start a JFrame that will be used as the message log
 			JFrame frame = new JFrame();
-			JOptionPane.showMessageDialog(frame, "Connected to " + address);
 			
+			//an area to add messages to the chat window
+			JTextArea chatArea= new JTextArea("Chat: " + username + "@" + address + "\n");
+			frame.setSize(500,700);
+			chatArea.setEditable(false);			
+			JScrollPane scroll = new JScrollPane (chatArea, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+			frame.add(scroll);
+			frame.setVisible(true);
+			
+			
+			String message = "";
+			//look for any messages sent by the server
 			while (true)
 			{
-				//init new Jframe for a new chat
-				JFrame chatWindow = new JFrame();
 				String chat;
 				
 				//when we get a new message from the server...
 				chat = serverIn.readLine();
-				//make a dialog window
-				JOptionPane.showMessageDialog(chatWindow, chat);
-				//chatbox.setText(chat);
+				
+				//update chat area
+				chatArea.append(chat+"\n");
 			}
 			
         }
-        catch(ConnectException e)
-		{
-            System.out.println("Error connecting to server. Check that server is running and accepting connections.");
-        }
         catch(Exception e)
 		{
-            System.out.println("Chat client closed.");
+            System.out.println("Exception in Thread #0");
         }
     }
 	
 	public void run()
 	{
+		//this manages any disconnects that the user might do
+		Runtime.getRuntime().addShutdownHook(new Thread(){
+			@Override
+			public void run()
+			{
+				try
+				{
+					System.out.println("Program Closed");
+					serverOut.writeBytes("/quit\n");
+				}
+				catch (Exception e)
+				{
+					System.out.println("end Message failed");
+				}
+			}
+		});
+		
 		//ready your next message
 		String msg;
 		while (true)
@@ -110,21 +129,20 @@ public class Client implements Runnable {
 			}
 			catch (Exception e)
 			{
-				System.out.println("Message failed");
+				//System.out.println("Message failed to send");
 			}
 		}
     }
 	
 	public void sendMessage(String inMessage) throws IOException
 	{
-		//if it is a command message, assume it is /quit and exit the server
+		//if it is a command message, assume it is /quit and exit the server, and tells the server that they are leaving
 		if (inMessage.charAt(0) == '/')
 		{
 				clientSocket.close();
-				System.out.println("CLIENT - Disconnected from server.");
-				System.exit(0);
+				System.exit(1);
 		}
 		//if it not a command, send the message to the server
-		serverOut.writeBytes("/chat" + username + ": " + inMessage + '\n');
+		serverOut.writeBytes("/chat" + inMessage + '\n');
 	}
 }
